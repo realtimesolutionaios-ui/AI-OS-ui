@@ -1,18 +1,30 @@
-export default function Home() {
-  async function testDify() {
-    const res = await fetch("/api/dify", { method: "POST" });
-    const text = await res.text();
-    alert(text);
+import type { NextApiRequest, NextApiResponse } from "next";
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  try {
+    const response = await fetch(
+      `${process.env.DIFY_BASE_URL}/chat-messages`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.DIFY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: {},
+          query: "AI-OS UI からのテスト問い合わせ",
+          response_mode: "blocking",
+          user: "ai-os-ui",
+        }),
+      }
+    );
+
+    const data = await response.json();
+    res.status(200).send(data.answer ?? JSON.stringify(data));
+  } catch (error) {
+    res.status(500).send("Dify API error");
   }
-
-  return (
-    <main style={{ padding: 40 }}>
-      <h1>AI-OS UI（商品版プロトタイプ）</h1>
-      <p>Difyを中核とした「診断 → 判断 → アクション」を統合するAI OS UI</p>
-
-      <button onClick={testDify}>
-        Difyに問い合わせる
-      </button>
-    </main>
-  );
 }
