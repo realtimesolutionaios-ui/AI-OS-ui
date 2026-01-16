@@ -15,9 +15,8 @@ export default async function handler(
         },
         body: JSON.stringify({
           inputs: {},
-          query: "テストメッセージ",
+          query: "AI-OS UI からのテスト問い合わせ",
           response_mode: "blocking",
-          conversation_id: "",
           user: "ai-os-ui",
         }),
       }
@@ -25,7 +24,7 @@ export default async function handler(
 
     const data = await response.json();
     res.status(200).send(data.answer ?? JSON.stringify(data));
-  } catch (e) {
+  } catch (error) {
     res.status(500).send("Dify API error");
   }
 }
