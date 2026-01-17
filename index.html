@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI-OS UI</title>
+</head>
+<body style="padding:40px;font-family:sans-serif">
+  <h1>AI-OS UI（商品版プロトタイプ）</h1>
+
+  <button onclick="testDify()">Dify に問い合わせる</button>
+
+  <pre id="result">結果がここに表示されます</pre>
+
+  <script>
+    async function testDify() {
+      document.getElementById("result").textContent = "問い合わせ中...";
+      try {
+        const res = await fetch("/api/dify", { method: "POST" });
+        const text = await res.text();
+        document.getElementById("result").textContent = text;
+      } catch {
+        document.getElementById("result").textContent = "❌ 接続失敗";
+      }
+    }
+  </script>
+</body>
+</html>
