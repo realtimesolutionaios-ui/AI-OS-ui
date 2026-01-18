@@ -2,146 +2,156 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>AI-OS UI｜次世代AIオペレーティングUI</title>
+  <title>AI-OS UI（Basic版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AI-OS UIは、診断・判断・アクションを統合する次世代AIオペレーティングインターフェースです。" />
 
   <style>
-    :root {
-      --bg-main: radial-gradient(circle at top, #0f172a, #020617);
-      --border: #1e293b;
-      --text-main: #e5e7eb;
-      --text-sub: #cbd5f5;
-      --text-muted: #94a3b8;
-      --accent: #2563eb;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg-main);
-      color: var(--text-main);
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: #0b0f1a;
+      color: #ffffff;
     }
 
-    header {
-      padding: 24px 40px;
-      border-bottom: 1px solid var(--border);
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-
-    main {
-      padding: 80px 40px;
+    .container {
       max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 20px;
     }
 
     h1 {
-      font-size: 42px;
-      margin: 0 0 16px 0;
-      letter-spacing: 0.02em;
+      font-size: 28px;
+      margin-bottom: 20px;
     }
 
     h2 {
-      margin-top: 0;
+      font-size: 20px;
+      margin-top: 40px;
     }
 
-    p {
-      color: var(--text-sub);
-      line-height: 1.8;
-      margin: 0 0 16px 0;
-    }
-
-    section {
-      margin-top: 56px;
-      padding: 32px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.6);
-    }
-
-    ul {
-      margin-top: 16px;
-      padding-left: 20px;
-      color: var(--text-sub);
-    }
-
-    li {
-      margin-bottom: 8px;
-    }
-
-    button {
+    .card {
+      background: #11162a;
+      border: 1px solid #2a2f4a;
+      border-radius: 12px;
+      padding: 20px;
       margin-top: 20px;
-      padding: 14px 22px;
-      font-size: 16px;
-      background: var(--accent);
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      cursor: not-allowed;
-      opacity: 0.85;
     }
 
-    footer {
-      margin-top: 140px;
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 13px;
-      color: #64748b;
+    /* ===== ライセンス認証 ===== */
+    #license-box {
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #2a2f4a;
+      background: #0f1430;
+    }
+
+    #license-box input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #000;
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    #license-box button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #4c6fff;
+      color: #fff;
+    }
+
+    #licenseStatus {
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    /* ===== 認証後に表示 ===== */
+    .licensed-only {
+      display: none;
+    }
+
+    body.licensed .licensed-only {
+      display: block;
     }
   </style>
 </head>
 
 <body>
-  <header>
-    AI-OS UI
-  </header>
 
-  <main>
+  <!-- ライセンス認証 -->
+  <div id="license-box">
+    <h3>ライセンス認証</h3>
+    <input id="licenseKey" placeholder="License Key を入力" />
+    <button onclick="verifyLicense()">認証</button>
+    <p id="licenseStatus"></p>
+  </div>
+
+  <!-- 認証後UI -->
+  <div class="container licensed-only">
     <h1>AI-OS UI（正式版）</h1>
 
-    <p>
-      AI-OS UI は、<br />
-      「診断 → 判断 → アクション」を一気通貫で統合する<br />
-      次世代 AI オペレーティング・インターフェースです。
-    </p>
-
-    <section>
+    <div class="card">
       <h2>プロダクト概要</h2>
       <p>
-        AI-OS UI は、複数の AI・データ・業務フローを横断し、<br />
-        人間の意思決定と実行を高速化・高度化するために設計されています。
+        AI-OS UIは、診断 → 判断 → 行動を一気通貫で支援する
+        オペレーティング・インターフェースです。
       </p>
+    </div>
 
-      <ul>
-        <li>状況を把握する（Diagnosis）</li>
-        <li>最適な判断を導く（Decision）</li>
-        <li>即座に行動へつなげる（Action）</li>
-      </ul>
-    </section>
-
-    <section>
+    <div class="card">
       <h2>現在の提供状況</h2>
-      <p>
-        現在は UI / 体験設計を最優先とした正式公開準備フェーズです。<br />
-        AI 連携・自動実行機能は、品質担保を前提に段階的に実装予定です。
-      </p>
+      <ul>
+        <li>状態診断（Diagnosis）</li>
+        <li>意思決定補助（Decision）</li>
+        <li>行動設計（Action）</li>
+      </ul>
+    </div>
+  </div>
 
-      <button disabled>
-        提供準備中
-      </button>
+  <!-- ===== License Verify Script ===== -->
+  <script>
+    async function verifyLicense() {
+      const key = document.getElementById("licenseKey").value;
+      const status = document.getElementById("licenseStatus");
 
-      <p style="font-size: 14px; color: var(--text-muted); margin-top: 10px;">
-        ※ 正式リリースに向けて、機能を順次公開予定です
-      </p>
-    </section>
-  </main>
+      status.innerText = "確認中...";
 
-  <footer>
-    © 2026 Real Time Solution AI OS
-  </footer>
+      try {
+        const res = await fetch("https://ai-os-gateway.vercel.app/api/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            license_key: key
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.valid) {
+          status.innerText = "✅ 認証成功";
+          document.body.classList.add("licensed");
+        } else {
+          status.innerText = "❌ 無効なライセンスです";
+        }
+      } catch (e) {
+        status.innerText = "⚠️ 通信エラー";
+      }
+    }
+  </script>
+
 </body>
 </html>
