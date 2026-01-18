@@ -96,29 +96,24 @@
     </div>
   </div>
 
- <script>
+<script>
 window.addEventListener("DOMContentLoaded", () => {
 
-  const btn = document.getElementById("verify-btn");
-  const input = document.getElementById("license-input");
-  const result = document.getElementById("result");
+  const input = document.getElementById("licenseKey");
+  const success = document.getElementById("successMessage");
+  const error = document.getElementById("errorMessage");
 
-  if (!btn) {
-    alert("verify-btn が見つかりません（HTML構造エラー）");
-    return;
-  }
-
-  btn.addEventListener("click", async () => {
+  async function checkLicense() {
     const licenseKey = input.value.trim();
 
+    success.style.display = "none";
+    error.style.display = "none";
+
     if (!licenseKey) {
-      result.textContent = "ライセンスキーを入力してください";
-      result.style.color = "orange";
+      error.textContent = "❌ 認証キーを入力してください";
+      error.style.display = "block";
       return;
     }
-
-    result.textContent = "確認中...";
-    result.style.color = "white";
 
     try {
       const res = await fetch("/api/verify", {
@@ -130,24 +125,31 @@ window.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
 
       if (data.valid) {
-        result.textContent = "✅ 認証成功";
-        result.style.color = "lightgreen";
-        document.getElementById("license-box").style.display = "none";
-        document.getElementById("app").style.display = "block";
+        success.style.display = "block";
+
+        // 🔽 認証成功後に Dify へ遷移
+        setTimeout(() => {
+          window.location.href = "https://udify.app/chat/PysaqG3VIgbnO9vO";
+        }, 1200);
+
       } else {
-        result.textContent = "❌ 無効なライセンスです";
-        result.style.color = "red";
+        error.textContent = "❌ 認証に失敗しました。キーを確認してください。";
+        error.style.display = "block";
       }
 
     } catch (e) {
       console.error(e);
-      result.textContent = "❌ 認証APIエラー";
-      result.style.color = "red";
+      error.textContent = "❌ 認証サーバーに接続できません";
+      error.style.display = "block";
     }
-  });
+  }
+
+  // グローバルに公開（onclick 用）
+  window.checkLicense = checkLicense;
 
 });
 </script>
+
 
 </body>
 </html>
