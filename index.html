@@ -28,7 +28,7 @@
 
     h2 {
       font-size: 20px;
-      margin-top: 40px;
+      margin-top: 30px;
     }
 
     .card {
@@ -37,6 +37,17 @@
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #4f7cff, #6b9bff);
+      color: #fff;
+      font-size: 14px;
     }
 
     /* ===== ライセンス認証 ===== */
@@ -61,18 +72,6 @@
       margin-top: 12px;
     }
 
-    #license-box button {
-      width: 100%;
-      margin-top: 14px;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      background: linear-gradient(135deg, #4f7cff, #6b9bff);
-      color: #fff;
-    }
-
     #result {
       margin-top: 14px;
       font-size: 14px;
@@ -88,89 +87,110 @@
 
 <body>
 
-  <!-- ライセンス認証画面 -->
+  <!-- ライセンス認証 -->
   <div id="license-box">
     <h2>ライセンス認証</h2>
-
-    <input
-      id="license-input"
-      type="text"
-      placeholder="ライセンスキーを入力"
-    />
-
-    <button id="verify-btn">確認</button>
-
+    <input id="license-input" type="text" placeholder="ライセンスキーを入力" />
+    <button id="verify-btn">認証</button>
     <div id="result"></div>
   </div>
 
-  <!-- 認証後に表示される本編 -->
+  <!-- 本編 -->
   <div id="app" class="container">
     <h1>AI-OS ダッシュボード</h1>
 
-    <div class="card">
-      <p>
-        🎉 ライセンス認証が完了しました。<br />
-        ここからAI-OSの本編UIが展開されます。
-      </p>
-    </div>
+    <!-- AUP診断 -->
+    <div class="card" id="aup-test">
+      <h2>AUP簡易診断</h2>
 
-    <div class="card">
-      <h2>次の実装候補</h2>
-      <ul>
-        <li>AUP診断UI</li>
-        <li>ユーザープロファイル表示</li>
-        <li>行動レコメンド</li>
-      </ul>
+      <p>Q1. 迷ったとき、まず動く？考える？</p>
+      <button onclick="answer('Drive')">まず動く</button>
+      <button onclick="answer('Still')">じっくり考える</button>
+
+      <p style="margin-top:20px;">Q2. 人と話すとエネルギーが増える？</p>
+      <button onclick="answer('Open')">増える</button>
+      <button onclick="answer('Depth')">一人が楽</button>
+
+      <p style="margin-top:20px;">Q3. 成果はスピード重視？完成度重視？</p>
+      <button onclick="answer('Rise')">スピード</button>
+      <button onclick="answer('Depth')">完成度</button>
+
+      <div id="aup-result" style="margin-top:30px;"></div>
     </div>
   </div>
 
-  <!-- ===== ライセンス検証ロジック ===== -->
+  <!-- ===== ロジック ===== -->
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const button = document.getElementById("verify-btn");
+    // ===== ライセンス認証 =====
+    document.getElementById("verify-btn").addEventListener("click", async () => {
       const input = document.getElementById("license-input");
       const result = document.getElementById("result");
-      const app = document.getElementById("app");
-      const licenseBox = document.getElementById("license-box");
+      const licenseKey = input.value.trim();
 
-      button.addEventListener("click", async () => {
-        const licenseKey = input.value.trim();
+      if (!licenseKey) {
+        result.textContent = "ライセンスキーを入力してください";
+        result.style.color = "orange";
+        return;
+      }
 
-        if (!licenseKey) {
-          result.textContent = "ライセンスキーを入力してください";
-          result.style.color = "orange";
-          return;
-        }
+      result.textContent = "確認中...";
+      result.style.color = "white";
 
-        result.textContent = "確認中...";
-        result.style.color = "white";
+      try {
+        const res = await fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ licenseKey })
+        });
 
-        try {
-          const res = await fetch("/api/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ licenseKey })
-          });
+        const data = await res.json();
 
-          const data = await res.json();
-
-          if (data.valid) {
-            result.textContent = "✅ 認証成功";
-            result.style.color = "lightgreen";
-
-            // UI切り替え
-            licenseBox.style.display = "none";
-            app.style.display = "block";
-          } else {
-            result.textContent = "❌ 無効なライセンスです";
-            result.style.color = "red";
-          }
-        } catch (e) {
-          result.textContent = "通信エラーが発生しました";
+        if (data.valid) {
+          result.textContent = "✅ 認証成功";
+          result.style.color = "lightgreen";
+          document.getElementById("license-box").style.display = "none";
+          document.getElementById("app").style.display = "block";
+        } else {
+          result.textContent = "❌ 無効なライセンスです";
           result.style.color = "red";
         }
-      });
+      } catch (e) {
+        result.textContent = "通信エラー";
+        result.style.color = "red";
+      }
     });
+
+    // ===== AUP簡易診断 =====
+    let scores = {
+      Drive: 0,
+      Still: 0,
+      Open: 0,
+      Depth: 0,
+      Rise: 0
+    };
+
+    function answer(type) {
+      scores[type]++;
+      const total = Object.values(scores).reduce((a, b) => a + b, 0);
+      if (total >= 3) showResult();
+    }
+
+    function showResult() {
+      const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+      const messages = {
+        Drive: "行動力が武器。まず動いて流れを作るタイプ。",
+        Still: "思考が強み。全体を俯瞰して安定を生むタイプ。",
+        Open: "対人感覚が鋭い。人を巻き込むタイプ。",
+        Depth: "深掘り職人。専門性で価値を出すタイプ。",
+        Rise: "成長志向。常に上を目指すタイプ。"
+      };
+
+      document.getElementById("aup-result").innerHTML = `
+        <h3>診断結果</h3>
+        <p><strong>${top}</strong></p>
+        <p>${messages[top]}</p>
+      `;
+    }
   </script>
 
 </body>
