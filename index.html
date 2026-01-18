@@ -96,50 +96,58 @@
     </div>
   </div>
 
-  <script>
-    // ===== Supabase 初期化 =====
-    const SUPABASE_URL = "https://zisglzsqetpgdkfpmrch.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_secret_5NzEr2k7Bx0kbVEpsNO0Gg_tdky82nz";
+ <script>
+window.addEventListener("DOMContentLoaded", () => {
 
-    const supabase = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY
-    );
+  const btn = document.getElementById("verify-btn");
+  const input = document.getElementById("license-input");
+  const result = document.getElementById("result");
 
-    // ===== 認証処理 =====
-    async function checkLicense() {
-      const key = document.getElementById("licenseKey").value.trim();
-      const successMsg = document.getElementById("successMessage");
-      const errorMsg = document.getElementById("errorMessage");
+  if (!btn) {
+    alert("verify-btn が見つかりません（HTML構造エラー）");
+    return;
+  }
 
-      successMsg.style.display = "none";
-      errorMsg.style.display = "none";
+  btn.addEventListener("click", async () => {
+    const licenseKey = input.value.trim();
 
-      if (!key) {
-        errorMsg.textContent = "❌ 認証キーを入力してください。";
-        errorMsg.style.display = "block";
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("licenses")
-        .select("id")
-        .eq("license_key", key)
-        .single();
-
-      if (error || !data) {
-        errorMsg.style.display = "block";
-      } else {
-        // 成功表示
-        successMsg.style.display = "block";
-
-        // 1秒後に Dify へ遷移
-        setTimeout(() => {
-          window.location.href =
-            "https://udify.app/chat/PysaqG3VIgbnO9vO";
-        }, 1000);
-      }
+    if (!licenseKey) {
+      result.textContent = "ライセンスキーを入力してください";
+      result.style.color = "orange";
+      return;
     }
-  </script>
+
+    result.textContent = "確認中...";
+    result.style.color = "white";
+
+    try {
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ licenseKey })
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        result.textContent = "✅ 認証成功";
+        result.style.color = "lightgreen";
+        document.getElementById("license-box").style.display = "none";
+        document.getElementById("app").style.display = "block";
+      } else {
+        result.textContent = "❌ 無効なライセンスです";
+        result.style.color = "red";
+      }
+
+    } catch (e) {
+      console.error(e);
+      result.textContent = "❌ 認証APIエラー";
+      result.style.color = "red";
+    }
+  });
+
+});
+</script>
+
 </body>
 </html>
