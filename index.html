@@ -42,11 +42,12 @@
     /* ===== ライセンス認証 ===== */
     #license-box {
       max-width: 420px;
-      margin: 60px auto;
+      margin: 80px auto;
       padding: 24px;
       border-radius: 12px;
       border: 1px solid #2a2f4a;
       background: #0f1430;
+      text-align: center;
     }
 
     #license-box input {
@@ -57,7 +58,7 @@
       border: 1px solid #444;
       background: #000;
       color: #fff;
-      margin-top: 10px;
+      margin-top: 12px;
     }
 
     #license-box button {
@@ -68,89 +69,108 @@
       border-radius: 6px;
       border: none;
       cursor: pointer;
-      background: #4c6fff;
+      background: linear-gradient(135deg, #4f7cff, #6b9bff);
       color: #fff;
     }
 
-    #licenseStatus {
-      margin-top: 12px;
+    #result {
+      margin-top: 14px;
       font-size: 14px;
+      min-height: 1.2em;
     }
 
-    /* ===== 認証後に表示 ===== */
-    .licensed-only {
+    /* ===== 本編UI ===== */
+    #app {
       display: none;
-    }
-
-    body.licensed .licensed-only {
-      display: block;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- ライセンス認証 -->
+  <!-- ライセンス認証画面 -->
   <div id="license-box">
-    <h3>ライセンス認証</h3>
-    <input id="licenseKey" placeholder="License Key を入力" />
-    <button onclick="verifyLicense()">認証</button>
-    <p id="licenseStatus"></p>
+    <h2>ライセンス認証</h2>
+
+    <input
+      id="license-input"
+      type="text"
+      placeholder="ライセンスキーを入力"
+    />
+
+    <button id="verify-btn">確認</button>
+
+    <div id="result"></div>
   </div>
 
-  <!-- 認証後UI -->
-  <div class="container licensed-only">
-    <h1>AI-OS UI（正式版）</h1>
+  <!-- 認証後に表示される本編 -->
+  <div id="app" class="container">
+    <h1>AI-OS ダッシュボード</h1>
 
     <div class="card">
-      <h2>プロダクト概要</h2>
       <p>
-        AI-OS UIは、診断 → 判断 → 行動を一気通貫で支援する
-        オペレーティング・インターフェースです。
+        🎉 ライセンス認証が完了しました。<br />
+        ここからAI-OSの本編UIが展開されます。
       </p>
     </div>
 
     <div class="card">
-      <h2>現在の提供状況</h2>
+      <h2>次の実装候補</h2>
       <ul>
-        <li>状態診断（Diagnosis）</li>
-        <li>意思決定補助（Decision）</li>
-        <li>行動設計（Action）</li>
+        <li>AUP診断UI</li>
+        <li>ユーザープロファイル表示</li>
+        <li>行動レコメンド</li>
       </ul>
     </div>
   </div>
 
-  <!-- ===== License Verify Script ===== -->
+  <!-- ===== ライセンス検証ロジック ===== -->
   <script>
-    async function verifyLicense() {
-      const key = document.getElementById("licenseKey").value;
-      const status = document.getElementById("licenseStatus");
+    document.addEventListener("DOMContentLoaded", () => {
+      const button = document.getElementById("verify-btn");
+      const input = document.getElementById("license-input");
+      const result = document.getElementById("result");
+      const app = document.getElementById("app");
+      const licenseBox = document.getElementById("license-box");
 
-      status.innerText = "確認中...";
+      button.addEventListener("click", async () => {
+        const licenseKey = input.value.trim();
 
-      try {
-        const res = await fetch("https://ai-os-gateway.vercel.app/api/verify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            license_key: key
-          })
-        });
-
-        const data = await res.json();
-
-        if (data.valid) {
-          status.innerText = "✅ 認証成功";
-          document.body.classList.add("licensed");
-        } else {
-          status.innerText = "❌ 無効なライセンスです";
+        if (!licenseKey) {
+          result.textContent = "ライセンスキーを入力してください";
+          result.style.color = "orange";
+          return;
         }
-      } catch (e) {
-        status.innerText = "⚠️ 通信エラー";
-      }
-    }
+
+        result.textContent = "確認中...";
+        result.style.color = "white";
+
+        try {
+          const res = await fetch("/api/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ licenseKey })
+          });
+
+          const data = await res.json();
+
+          if (data.valid) {
+            result.textContent = "✅ 認証成功";
+            result.style.color = "lightgreen";
+
+            // UI切り替え
+            licenseBox.style.display = "none";
+            app.style.display = "block";
+          } else {
+            result.textContent = "❌ 無効なライセンスです";
+            result.style.color = "red";
+          }
+        } catch (e) {
+          result.textContent = "通信エラーが発生しました";
+          result.style.color = "red";
+        }
+      });
+    });
   </script>
 
 </body>
