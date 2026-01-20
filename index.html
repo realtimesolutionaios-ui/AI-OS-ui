@@ -1,155 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>AI-OS 認証ゲート</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Supabase SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI-OS</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-        "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-      background: #0b0f1a;
-      color: #ffffff;
-    }
-
-    .container {
-      max-width: 420px;
-      margin: 0 auto;
-      padding: 80px 20px;
-      text-align: center;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin-bottom: 20px;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #444;
-      background: #000;
-      color: #fff;
-      margin-top: 10px;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 16px;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      background: #2563eb;
-      color: #fff;
-    }
-
-    button:hover {
-      background: #1d4ed8;
-    }
-
-    #successMessage {
-      display: none;
-      margin-top: 24px;
-      color: #4ade80;
-      font-size: 16px;
-    }
-
-    #errorMessage {
-      display: none;
-      margin-top: 24px;
-      color: #f87171;
-      font-size: 16px;
-    }
+    body{font-family:system-ui,-apple-system;max-width:720px;margin:40px auto;padding:0 16px;}
+    .box{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0;}
+    input,button,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #ccc;font-size:16px;}
+    button{cursor:pointer;border:none;background:#2563eb;color:#fff;font-weight:700;}
+    .muted{color:#666;font-size:13px;}
+    .row{display:flex;gap:8px}
+    .row button{width:auto;min-width:120px}
+    pre{white-space:pre-wrap;background:#0b1020;color:#d7e1ff;padding:12px;border-radius:12px;}
   </style>
 </head>
-
 <body>
-  <div class="container">
-    <h1>AI-OS 利用認証</h1>
+  <h1>AI-OS</h1>
 
-    <p>認証キーを入力してください</p>
-
-    <input
-      id="licenseKey"
-      type="text"
-      placeholder="認証キー"
-    />
-
-    <button onclick="checkLicense()">認証する</button>
-
-    <div id="successMessage">
-      ✅ 認証が完了しました。AI-OSを起動します…
+  <div id="auth" class="box">
+    <h2>ログイン（Email）</h2>
+    <p class="muted">メールに届くリンク（OTP）でログインします。端末が変わっても同じEmailで復元できます。</p>
+    <input id="email" type="email" placeholder="you@example.com" />
+    <div class="row" style="margin-top:8px;">
+      <button id="sendLink">ログインリンク送信</button>
+      <button id="logout" style="background:#111827">ログアウト</button>
     </div>
-
-    <div id="errorMessage">
-      ❌ 認証に失敗しました。キーを確認してください。
-    </div>
+    <p id="authMsg" class="muted"></p>
   </div>
 
-<script>
-window.addEventListener("DOMContentLoaded", () => {
+  <div id="chat" class="box" style="display:none;">
+    <h2>AI-OS チャット</h2>
+    <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
+    <button id="send" style="margin-top:8px;">送信</button>
+    <h3>返答</h3>
+    <pre id="out"></pre>
+  </div>
 
-  const input = document.getElementById("licenseKey");
-  const success = document.getElementById("successMessage");
-  const error = document.getElementById("errorMessage");
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  async function checkLicense() {
-    const licenseKey = input.value.trim();
+    const authBox = document.getElementById("auth");
+    const chatBox = document.getElementById("chat");
+    const authMsg = document.getElementById("authMsg");
+    const out = document.getElementById("out");
 
-    success.style.display = "none";
-    error.style.display = "none";
+    // ① 設定取得（Vercelの環境変数をサーバー経由で読む）
+    const cfg = await fetch("/api/config").then(r => r.json());
+    const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
-    if (!licenseKey) {
-      error.textContent = "❌ 認証キーを入力してください";
-      error.style.display = "block";
-      return;
+    // ② セッション監視
+    async function refreshUI() {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (session) {
+        chatBox.style.display = "block";
+        authMsg.textContent = `ログイン中: ${session.user.email}`;
+      } else {
+        chatBox.style.display = "none";
+        authMsg.textContent = "未ログイン";
+      }
     }
 
-    try {
-      const res = await fetch("/api/verify", {
+    // 初期表示
+    await refreshUI();
+
+    // ③ Email OTP（リンク送信）
+    document.getElementById("sendLink").onclick = async () => {
+      const email = document.getElementById("email").value.trim();
+      if (!email) return alert("Emailを入れてください");
+
+      authMsg.textContent = "送信中...";
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin }
+      });
+      authMsg.textContent = error
+        ? エラー: ${error.message}
+        : "ログインリンクを送信しました。メールを確認してください。";
+    };
+
+    // ④ ログアウト
+    document.getElementById("logout").onclick = async () => {
+      await supabase.auth.signOut();
+      await refreshUI();
+    };
+
+    // ⑤ 送信（Gatewayへ）
+    document.getElementById("send").onclick = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session) return alert("先にログインしてください");
+
+      const message = document.getElementById("msg").value.trim();
+      if (!message) return;
+
+      out.textContent = "送信中...";
+      const res = await fetch(`${cfg.gatewayUrl}/api/ask`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ licenseKey })
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": Bearer ${session.access_token}
+        },
+        body: JSON.stringify({ message })
       });
 
-      const data = await res.json();
-
-      if (data.valid) {
-        success.style.display = "block";
-
-        // 🔽 認証成功後に Dify へ遷移
-        setTimeout(() => {
-          window.location.href = "https://udify.app/chat/PysaqG3VIgbnO9vO";
-        }, 1200);
-
-      } else {
-        error.textContent = "❌ 認証に失敗しました。キーを確認してください。";
-        error.style.display = "block";
+      const json = await res.json();
+      if (!res.ok) {
+        out.textContent = `エラー: ${json.error}\n${json.detail || ""}`;
+        return;
       }
+      out.textContent = json.answer;
+      document.getElementById("msg").value = "";
+    };
 
-    } catch (e) {
-      console.error(e);
-      error.textContent = "❌ 認証サーバーに接続できません";
-      error.style.display = "block";
-    }
-  }
-
-  // グローバルに公開（onclick 用）
-  window.checkLicense = checkLicense;
-
-});
-</script>
-
-
+    // ⑥ 認証状態が変わったらUI更新
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshUI();
+    });
+  </script>
 </body>
 </html>
