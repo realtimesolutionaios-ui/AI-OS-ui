@@ -76,9 +76,8 @@
         options: { emailRedirectTo: window.location.origin }
       });
       authMsg.textContent = error
-        ? エラー: ${error.message}
-        : "ログインリンクを送信しました。メールを確認してください。";
-    };
+  ? `エラー: ${error.message}`
+  : "ログインリンクを送信しました。メールを確認してください。";
 
     // ④ ログアウト
     document.getElementById("logout").onclick = async () => {
@@ -100,7 +99,7 @@
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": Bearer ${session.access_token}
+          "Authorization": `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ message })
       });
