@@ -78,7 +78,7 @@
       authMsg.textContent = error
   ? `エラー: ${error.message}`
   : "ログインリンクを送信しました。メールを確認してください。";
-
+    };
     // ④ ログアウト
     document.getElementById("logout").onclick = async () => {
       await supabase.auth.signOut();
