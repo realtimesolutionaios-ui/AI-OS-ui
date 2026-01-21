@@ -49,6 +49,16 @@
     const cfg = await fetch("/api/config").then(r => r.json());
     const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
+const cfg = await fetch("/api/config").then(r => r.json());
+console.log("cfg loaded:", cfg);
+
+const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+console.log("supabase client created:", supabase);
+
+// ★ Supabase 初期化直後のセッション確認（重要）
+const { data: initSession } = await supabase.auth.getSession();
+console.log("initial session:", initSession);
+    
     // ② セッション監視
     async function refreshUI() {
       const { data } = await supabase.auth.getSession();
