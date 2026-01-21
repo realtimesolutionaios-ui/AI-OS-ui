@@ -65,6 +65,12 @@
     // 初期表示
     await refreshUI();
 
+    // 🔑 Magic Linkで戻ってきた直後のセッション確定処理
+const { data: initialSession } = await supabase.auth.getSession();
+if (initialSession.session) {
+  await refreshUI();
+}
+
     // ③ Email OTP（リンク送信）
     document.getElementById("sendLink").onclick = async () => {
       const email = document.getElementById("email").value.trim();
