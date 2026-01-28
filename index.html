@@ -53,153 +53,100 @@
     }
   </style>
 </head>
+
 <body>
+  <h1>AI-OS</h1>
 
-<h1>AI-OS</h1>
-
-<div id="auth" class="box">
-  <h2>ログイン（Email）</h2>
-  <p class="muted">
-    メールに届くリンク（OTP）でログインします。<br>
-    端末が変わっても同じEmailで復元できます。
-  </p>
-
-  <input id="email" type="email" placeholder="you@example.com" />
-
-  <div class="row">
-    <button id="sendLink">ログインリンク送信</button>
-    <button id="logout" style="background:#111827">ログアウト</button>
+  <!-- 🔐 ログイン -->
+  <div id="auth" class="box">
+    <h2>ログイン（Email）</h2>
+    <p class="muted">
+      メールに届くリンク（OTP）でログインします。
+    </p>
+    <input id="email" type="email" placeholder="you@example.com" />
+    <div class="row">
+      <button id="sendLink">ログインリンク送信</button>
+      <button id="logout" style="background:#111827">ログアウト</button>
+    </div>
+    <p id="authMsg" class="muted"></p>
   </div>
 
-  <p id="authMsg" class="muted"></p>
-</div>
+  <!-- 💬 チャット -->
+  <div id="chat" class="box" style="display:none;">
+    <h2>AI-OS チャット</h2>
+    <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
+    <button id="send" style="margin-top:8px;">送信</button>
+    <h3>返答</h3>
+    <pre id="out"></pre>
+  </div>
 
-<div id="chat" class="box" style="display:none;">
-  <h2>AI-OS チャット</h2>
-  <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
-  <button id="send" style="margin-top:8px;">送信</button>
-  <h3>返答</h3>
-  <pre id="out"></pre>
-</div>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const authBox = document.getElementById("auth");
+    const chatBox = document.getElementById("chat");
+    const authMsg = document.getElementById("authMsg");
 
-  const authMsg = document.getElementById("authMsg");
-  const chatBox = document.getElementById("chat");
-  const out = document.getElementById("out");
+    // ① 設定取得
+    const cfg = await fetch("/api/config").then(r => r.json());
+    console.log("cfg:", cfg);
 
-  // ===============================
-  // ① 設定取得（Vercel API）
-  // ===============================
-  const cfg = await fetch("/api/config").then(r => r.json());
-  console.log("cfg loaded:", cfg);
+    // ② Supabase 初期化
+    const supabase = createClient(
+      cfg.supabaseUrl,
+      cfg.supabaseAnonKey
+    );
 
-  // ===============================
-  // ② Supabase 初期化
-  // ===============================
-  const supabase = createClient(
-    cfg.supabaseUrl,
-    cfg.supabaseAnonKey
-  );
-  console.log("supabase client created");
+    // 🔁 UI切り替え関数（唯一の真実）
+    async function refreshUI() {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
 
-  // ===============================
-  // ③ UI更新（唯一の真実）
-  // ===============================
-  async function refreshUI() {
-    const { data, error } = await supabase.auth.getSession();
-    console.log("refreshUI session:", data?.session);
-
-    if (data?.session) {
-      chatBox.style.display = "block";
-      authMsg.textContent = `ログイン中: ${data.session.user.email}`;
-    } else {
-      chatBox.style.display = "none";
-      authMsg.textContent = "未ログイン";
-    }
-  }
-
-  // 初期描画
-  await refreshUI();
-
-  // ===============================
-  // ④ 認証状態監視（これだけ）
-  // ===============================
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log("auth state changed:", event, session);
-    await refreshUI();
-  });
-
-  // ===============================
-  // ⑤ ログインリンク送信
-  // ===============================
-  document.getElementById("sendLink").onclick = async () => {
-    const email = document.getElementById("email").value.trim();
-    if (!email) {
-      alert("Emailを入力してください");
-      return;
-    }
-
-    authMsg.textContent = "送信中…";
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin
+      if (session) {
+        authBox.style.display = "none";
+        chatBox.style.display = "block";
+      } else {
+        authBox.style.display = "block";
+        chatBox.style.display = "none";
+        authMsg.textContent = "未ログイン";
       }
-    });
+    }
 
-    authMsg.textContent = error
-      ? `エラー: ${error.message}`
-      : "ログインリンクを送信しました。メールを確認してください。";
-  };
-
-  // ===============================
-  // ⑥ ログアウト
-  // ===============================
-  document.getElementById("logout").onclick = async () => {
-    await supabase.auth.signOut();
+    // 初期表示
     await refreshUI();
-  };
 
-  // ===============================
-  // ⑦ Gateway送信
-  // ===============================
-  document.getElementById("send").onclick = async () => {
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
-
-    if (!session?.user) {
-      alert("先にログインしてください");
-      return;
-    }
-
-    const message = document.getElementById("msg").value.trim();
-    if (!message) return;
-
-    out.textContent = "送信中…";
-
-    const res = await fetch(`${cfg.gatewayUrl}/api/ask`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ message })
+    // 🔄 認証状態変化時
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshUI();
     });
 
-    const json = await res.json();
+    // ✉️ Magic Link 送信
+    document.getElementById("sendLink").onclick = async () => {
+      const email = document.getElementById("email").value.trim();
+      if (!email) {
+        alert("Emailを入力してください");
+        return;
+      }
 
-    if (!res.ok) {
-      out.textContent = `エラー: ${json.error || "unknown error"}`;
-      return;
-    }
+      authMsg.textContent = "送信中…";
 
-    out.textContent = json.answer;
-    document.getElementById("msg").value = "";
-  };
-</script>
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
 
+      authMsg.textContent = error
+        ? `エラー: ${error.message}`
+        : "ログインリンクを送信しました。メールを確認してください。";
+    };
+
+    // 🚪 ログアウト
+    document.getElementById("logout").onclick = async () => {
+      await supabase.auth.signOut();
+      await refreshUI();
+    };
+  </script>
 </body>
 </html>
