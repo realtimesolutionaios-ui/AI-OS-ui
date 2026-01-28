@@ -51,6 +51,13 @@ console.log("cfg loaded:", cfg);
 
 // ② Supabase クライアント生成
 const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+let session = null;
+
+// 🔹 ログイン状態を常に監視する
+supabase.auth.onAuthStateChange((event, newSession) => {
+  console.log("auth event:", event);
+  session = newSession;
+});    
 console.log("supabase client created:", supabase);
     
 // ★ Supabase 初期化直後のセッション確認（重要）
@@ -103,7 +110,10 @@ if (initialSession.session) {
     document.getElementById("send").onclick = async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
-      if (!session) return alert("先にログインしてください");
+      if (!session?.user) {
+  alert("先にログインしてください");
+  return;
+}
 
       const message = document.getElementById("msg").value.trim();
       if (!message) return;
