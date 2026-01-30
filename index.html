@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AI-OS</title>
+
   <style>
     body {
       font-family: system-ui, -apple-system;
@@ -31,10 +32,6 @@
       color: #fff;
       font-weight: 700;
     }
-    .muted {
-      color: #666;
-      font-size: 13px;
-    }
     .row {
       display: flex;
       gap: 8px;
@@ -44,12 +41,17 @@
       width: auto;
       min-width: 120px;
     }
+    .muted {
+      color: #666;
+      font-size: 13px;
+    }
     pre {
       white-space: pre-wrap;
       background: #0b1020;
       color: #d7e1ff;
       padding: 12px;
       border-radius: 12px;
+      min-height: 40px;
     }
   </style>
 </head>
@@ -60,36 +62,41 @@
   <!-- 🔐 ログイン -->
   <div id="auth" class="box">
     <h2>ログイン（Email）</h2>
-    <p class="muted">
-      メールに届くリンク（OTP）でログインします。
-    </p>
+    <p class="muted">メールのMagic Linkでログインします。</p>
+
     <input id="email" type="email" placeholder="you@example.com" />
+
     <div class="row">
       <button id="sendLink">ログインリンク送信</button>
       <button id="logout" style="background:#111827">ログアウト</button>
     </div>
+
     <p id="authMsg" class="muted"></p>
   </div>
 
   <!-- 💬 チャット -->
   <div id="chat" class="box" style="display:none;">
     <h2>AI-OS チャット</h2>
+
     <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
     <button id="send" style="margin-top:8px;">送信</button>
+
     <h3>返答</h3>
     <pre id="out"></pre>
   </div>
 
+  <!-- ================= JS ================= -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
     const authBox = document.getElementById("auth");
     const chatBox = document.getElementById("chat");
     const authMsg = document.getElementById("authMsg");
+    const out = document.getElementById("out");
 
-    // ① 設定取得
+    // ① 設定取得（Vercel /api/config）
     const cfg = await fetch("/api/config").then(r => r.json());
-    console.log("cfg:", cfg);
+    console.log("cfg loaded:", cfg);
 
     // ② Supabase 初期化
     const supabase = createClient(
@@ -97,7 +104,7 @@
       cfg.supabaseAnonKey
     );
 
-    // 🔁 UI切り替え関数（唯一の真実）
+    // 🔁 UI切替（唯一の真実）
     async function refreshUI() {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
@@ -115,7 +122,7 @@
     // 初期表示
     await refreshUI();
 
-    // 🔄 認証状態変化時
+    // 認証状態変化
     supabase.auth.onAuthStateChange(async () => {
       await refreshUI();
     });
@@ -123,18 +130,13 @@
     // ✉️ Magic Link 送信
     document.getElementById("sendLink").onclick = async () => {
       const email = document.getElementById("email").value.trim();
-      if (!email) {
-        alert("Emailを入力してください");
-        return;
-      }
+      if (!email) return alert("Emailを入力してください");
 
       authMsg.textContent = "送信中…";
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
+        options: { emailRedirectTo: window.location.origin }
       });
 
       authMsg.textContent = error
@@ -146,6 +148,45 @@
     document.getElementById("logout").onclick = async () => {
       await supabase.auth.signOut();
       await refreshUI();
+    };
+
+    // 💬 チャット送信（←★ ここが今まで無かった部分）
+    document.getElementById("send").onclick = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+
+      if (!session) {
+        alert("先にログインしてください");
+        return;
+      }
+
+      const message = document.getElementById("msg").value.trim();
+      if (!message) return;
+
+      out.textContent = "送信中…";
+
+      try {
+        const res = await fetch(`${cfg.gatewayUrl}/api/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ message })
+        });
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          out.textContent = `エラー: ${json.error || res.status}`;
+          return;
+        }
+
+        out.textContent = json.answer ?? JSON.stringify(json, null, 2);
+        document.getElementById("msg").value = "";
+      } catch (e) {
+        out.textContent = `通信エラー: ${e.message}`;
+      }
     };
   </script>
 </body>
