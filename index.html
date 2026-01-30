@@ -98,11 +98,18 @@
     const cfg = await fetch("/api/config").then(r => r.json());
     console.log("cfg loaded:", cfg);
 
-    // ② Supabase 初期化
-    const supabase = createClient(
-      cfg.supabaseUrl,
-      cfg.supabaseAnonKey
-    );
+   // ② Supabase 初期化（★完全版）
+const supabase = createClient(
+  cfg.supabaseUrl,
+  cfg.supabaseAnonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true, // ← これが最重要
+    },
+  }
+);
 
     // 🔁 UI切替（唯一の真実）
     async function refreshUI() {
