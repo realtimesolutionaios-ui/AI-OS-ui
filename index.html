@@ -5,220 +5,98 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AI-OS</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system;
-      max-width: 720px;
-      margin: 40px auto;
-      padding: 0 16px;
-    }
-    .box {
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 16px;
-      margin: 12px 0;
-    }
-    input, button, textarea {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      cursor: pointer;
-      border: none;
-      background: #2563eb;
-      color: #fff;
-      font-weight: 700;
-    }
-    button.secondary {
-      background: #111827;
-    }
-    .muted {
-      color: #666;
-      font-size: 13px;
-    }
-    .row {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .row button {
-      width: auto;
-      min-width: 120px;
-    }
-    pre {
-      white-space: pre-wrap;
-      background: #0b1020;
-      color: #d7e1ff;
-      padding: 12px;
-      border-radius: 12px;
-      min-height: 40px;
-    }
+    body { font-family: system-ui,-apple-system; max-width:720px; margin:40px auto; padding:0 16px; }
+    .box { border:1px solid #ddd; border-radius:12px; padding:16px; margin:12px 0; }
+    input, button, textarea { width:100%; padding:12px; border-radius:10px; border:1px solid #ccc; font-size:16px; }
+    button { cursor:pointer; border:none; background:#2563eb; color:#fff; font-weight:700; }
+    .muted { color:#666; font-size:13px; }
+    .row { display:flex; gap:8px; margin-top:8px }
+    .row button { width:auto; min-width:120px }
+    pre { white-space:pre-wrap; background:#0b1020; color:#d7e1ff; padding:12px; border-radius:12px; }
   </style>
 </head>
-
 <body>
-  <h1>AI-OS</h1>
 
-  <!-- 🔐 ログイン -->
-  <div id="auth" class="box">
-    <h2>ログイン（Email）</h2>
-    <p class="muted">メールに届くリンク（OTP）でログインします。</p>
-    <input id="email" type="email" placeholder="you@example.com" />
-    <div class="row">
-      <button id="sendLink">ログインリンク送信</button>
-      <button id="logout" class="secondary">ログアウト</button>
-    </div>
-    <p id="authMsg" class="muted"></p>
+<h1>AI-OS</h1>
+
+<div id="auth" class="box">
+  <h2>ログイン（Email）</h2>
+  <p class="muted">メールに届くリンク（OTP）でログインします。</p>
+  <input id="email" type="email" placeholder="you@example.com" />
+  <div class="row">
+    <button id="sendLink">ログインリンク送信</button>
+    <button id="logout" style="background:#111827">ログアウト</button>
   </div>
+  <p id="authMsg" class="muted"></p>
+</div>
 
-  <!-- 💬 チャット -->
-  <div id="chat" class="box" style="display:none;">
-    <h2>AI-OS チャット</h2>
-    <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
-    <button id="send" style="margin-top:8px;">送信</button>
-    <h3>返答</h3>
-    <pre id="out"></pre>
-  </div>
+<div id="chat" class="box" style="display:none;">
+  <h2>AI-OS チャット</h2>
+  <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
+  <button id="send" style="margin-top:8px;">送信</button>
+  <h3>返答</h3>
+  <pre id="out"></pre>
+</div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    console.log("✅ AI-OS script start");
+  console.log("JS start");
 
-    const authBox = document.getElementById("auth");
-    const chatBox = document.getElementById("chat");
-    const authMsg = document.getElementById("authMsg");
-    const out = document.getElementById("out");
+  const authBox = document.getElementById("auth");
+  const chatBox = document.getElementById("chat");
+  const authMsg = document.getElementById("authMsg");
+  const out = document.getElementById("out");
 
-    // =========================
-    // ① 設定取得（失敗しても止めない）
-    // =========================
-    let cfg;
-    try {
-      const res = await fetch("/api/config");
-      if (!res.ok) throw new Error("config fetch failed");
-      cfg = await res.json();
-      console.log("cfg loaded:", cfg);
-    } catch (e) {
-      alert("設定読み込みに失敗しました（/api/config）");
-      console.error(e);
+  // ★ cfg は1回だけ
+  const cfg = await fetch("/api/config").then(r => r.json());
+  console.log("cfg loaded:", cfg);
+
+  // ★ supabase も1回だけ
+  const supabase = createClient(
+    cfg.supabaseUrl,
+    cfg.supabaseAnonKey
+  );
+
+  // UI切替（唯一の真実）
+  async function refreshUI() {
+    const { data } = await supabase.auth.getSession();
+    console.log("session:", data.session);
+
+    if (data.session) {
+      authBox.style.display = "none";
+      chatBox.style.display = "block";
+    } else {
+      authBox.style.display = "block";
+      chatBox.style.display = "none";
+      authMsg.textContent = "未ログイン";
     }
+  }
 
-    if (!cfg?.supabaseUrl || !cfg?.supabaseAnonKey) {
-      throw new Error("Supabase config missing");
-    }
+  await refreshUI();
 
-    // =========================
-    // ② Supabase 初期化
-    // =========================
-    const supabase = createClient(
-      cfg.supabaseUrl,
-      cfg.supabaseAnonKey
-    );
+  supabase.auth.onAuthStateChange(refreshUI);
 
-    // =========================
-    // ③ UI切り替え（唯一の正解）
-    // =========================
-    async function refreshUI() {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error(error);
-        return;
-      }
+  document.getElementById("sendLink").onclick = async () => {
+    const email = document.getElementById("email").value.trim();
+    if (!email) return alert("Emailを入力してください");
 
-      if (data.session) {
-        authBox.style.display = "none";
-        chatBox.style.display = "block";
-      } else {
-        authBox.style.display = "block";
-        chatBox.style.display = "none";
-        authMsg.textContent = "未ログイン";
-      }
-    }
+    authMsg.textContent = "送信中…";
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    authMsg.textContent = error
+      ? `エラー: ${error.message}`
+      : "メールを確認してください";
+  };
 
+  document.getElementById("logout").onclick = async () => {
+    await supabase.auth.signOut();
     await refreshUI();
+  };
 
-    supabase.auth.onAuthStateChange(async () => {
-      await refreshUI();
-    });
+  document.getElementById("send").onclick = async () => {
+    out.textContent = "送信ボタンは正常に反応しています 👍";
+  };
+</script>
 
-    // =========================
-    // ④ Magic Link送信
-    // =========================
-    document.getElementById("sendLink").onclick = async () => {
-      const email = document.getElementById("email").value.trim();
-      if (!email) {
-        alert("Emailを入力してください");
-        return;
-      }
-
-      authMsg.textContent = "送信中…";
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
-      });
-
-      authMsg.textContent = error
-        ? `エラー: ${error.message}`
-        : "ログインリンクを送信しました。メールを確認してください。";
-    };
-
-    // =========================
-    // ⑤ ログアウト
-    // =========================
-    document.getElementById("logout").onclick = async () => {
-      await supabase.auth.signOut();
-      await refreshUI();
-    };
-
-    // =========================
-    // ⑥ チャット送信（必ず反応する）
-    // =========================
-    document.getElementById("send").onclick = async () => {
-      out.textContent = "送信中…";
-
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        alert("ログインしてください");
-        return;
-      }
-
-      const message = document.getElementById("msg").value.trim();
-      if (!message) {
-        out.textContent = "メッセージが空です";
-        return;
-      }
-
-      try {
-        const res = await fetch(`${cfg.gatewayUrl}/api/ask`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${data.session.access_token}`
-          },
-          body: JSON.stringify({ message })
-        });
-
-        const json = await res.json();
-
-        if (!res.ok) {
-          out.textContent = `エラー: ${json.error || res.status}`;
-          return;
-        }
-
-        out.textContent = json.answer || "（返答なし）";
-        document.getElementById("msg").value = "";
-
-      } catch (e) {
-        console.error(e);
-        out.textContent = "通信エラーが発生しました";
-      }
-    };
-  </script>
 </body>
 </html>
