@@ -26,12 +26,12 @@
       font-size: 16px;
     }
     button {
-      cursor: pointer;
-      border: none;
       background: #2563eb;
       color: #fff;
       font-weight: 700;
+      border: none;
       margin-top: 8px;
+      cursor: pointer;
     }
     .row {
       display: flex;
@@ -46,12 +46,12 @@
       font-size: 13px;
     }
     pre {
-      white-space: pre-wrap;
       background: #0b1020;
       color: #d7e1ff;
       padding: 12px;
       border-radius: 12px;
       min-height: 60px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -59,32 +59,27 @@
 <body>
   <h1>AI-OS</h1>
 
-  <!-- 🔐 ログイン -->
+  <!-- 🔐 LOGIN -->
   <div id="auth" class="box">
     <h2>ログイン（Email）</h2>
-    <p class="muted">メールに届くリンク（OTP）でログインします。</p>
-
     <input id="email" type="email" placeholder="you@example.com" />
-
     <div class="row">
       <button id="sendLink">ログインリンク送信</button>
       <button id="logout" style="background:#111827">ログアウト</button>
     </div>
-
     <p id="authMsg" class="muted"></p>
   </div>
 
-  <!-- 💬 チャット -->
+  <!-- 💬 CHAT -->
   <div id="chat" class="box" style="display:none;">
     <h2>AI-OS チャット</h2>
-    <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
+    <textarea id="msg" rows="3"></textarea>
     <button id="send">送信</button>
-
     <h3>返答</h3>
     <pre id="out"></pre>
   </div>
 
-  <!-- ✅ JS（ここが重要） -->
+  <!-- ✅ SINGLE SOURCE OF TRUTH -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
@@ -93,16 +88,16 @@
     const authMsg = document.getElementById("authMsg");
     const out = document.getElementById("out");
 
-    // 🔒 cfg を「宣言しない」安全構造
+    // cfg は window に1回だけ
     async function getCfg() {
-      if (!window.__AUP_CFG__) {
-        window.__AUP_CFG__ = await fetch("/api/config").then(r => r.json());
-        console.log("cfg loaded:", window.__AUP_CFG__);
+      if (!window.__CFG__) {
+        window.__CFG__ = await fetch("/api/config").then(r => r.json());
+        console.log("cfg loaded:", window.__CFG__);
       }
-      return window.__AUP_CFG__;
+      return window.__CFG__;
     }
 
-    async function boot() {
+    async function main() {
       const cfg = await getCfg();
 
       const supabase = createClient(
@@ -112,9 +107,7 @@
 
       async function refreshUI() {
         const { data } = await supabase.auth.getSession();
-        const session = data.session;
-
-        if (session) {
+        if (data.session) {
           authBox.style.display = "none";
           chatBox.style.display = "block";
         } else {
@@ -125,48 +118,36 @@
       }
 
       await refreshUI();
-
       supabase.auth.onAuthStateChange(refreshUI);
 
-      // ✉️ ログインリンク送信
       document.getElementById("sendLink").onclick = async () => {
         const email = document.getElementById("email").value.trim();
-        if (!email) {
-          alert("Emailを入力してください");
-          return;
-        }
+        if (!email) return alert("Emailを入力してください");
 
         authMsg.textContent = "送信中…";
-
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: {
-            emailRedirectTo: window.location.origin
-          }
+          options: { emailRedirectTo: location.origin }
         });
 
         authMsg.textContent = error
-          ? `エラー: ${error.message}`
-          : "ログインリンクを送信しました。メールを確認してください。";
+          ? error.message
+          : "ログインリンクを送信しました";
       };
 
-      // 🚪 ログアウト
       document.getElementById("logout").onclick = async () => {
         await supabase.auth.signOut();
         await refreshUI();
       };
 
-      // 💬 チャット送信（仮：無反応防止）
-      document.getElementById("send").onclick = async () => {
+      document.getElementById("send").onclick = () => {
         const text = document.getElementById("msg").value.trim();
         if (!text) return;
-
-        out.textContent = "送信しました（※API未接続）\n\n" + text;
+        out.textContent = "送信成功（仮）\n\n" + text;
       };
     }
 
-    // 🔑 起動（何回評価されても安全）
-    boot();
+    main();
   </script>
 </body>
-</html>送信
+</html>
