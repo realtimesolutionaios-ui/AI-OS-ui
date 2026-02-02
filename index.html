@@ -5,98 +5,143 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AI-OS</title>
   <style>
-    body { font-family: system-ui,-apple-system; max-width:720px; margin:40px auto; padding:0 16px; }
-    .box { border:1px solid #ddd; border-radius:12px; padding:16px; margin:12px 0; }
-    input, button, textarea { width:100%; padding:12px; border-radius:10px; border:1px solid #ccc; font-size:16px; }
-    button { cursor:pointer; border:none; background:#2563eb; color:#fff; font-weight:700; }
-    .muted { color:#666; font-size:13px; }
-    .row { display:flex; gap:8px; margin-top:8px }
-    .row button { width:auto; min-width:120px }
-    pre { white-space:pre-wrap; background:#0b1020; color:#d7e1ff; padding:12px; border-radius:12px; }
+    body {
+      font-family: system-ui, -apple-system;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    .box {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0;
+    }
+    input, button, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+    }
+    .muted {
+      color: #666;
+      font-size: 13px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .row button {
+      width: auto;
+      min-width: 120px;
+    }
+    pre {
+      white-space: pre-wrap;
+      background: #0b1020;
+      color: #d7e1ff;
+      padding: 12px;
+      border-radius: 12px;
+    }
   </style>
 </head>
+
 <body>
+  <h1>AI-OS</h1>
 
-<h1>AI-OS</h1>
-
-<div id="auth" class="box">
-  <h2>ログイン（Email）</h2>
-  <p class="muted">メールに届くリンク（OTP）でログインします。</p>
-  <input id="email" type="email" placeholder="you@example.com" />
-  <div class="row">
-    <button id="sendLink">ログインリンク送信</button>
-    <button id="logout" style="background:#111827">ログアウト</button>
+  <!-- 🔐 ログイン -->
+  <div id="auth" class="box">
+    <h2>ログイン（Email）</h2>
+    <p class="muted">メールに届くリンク（OTP）でログインします。</p>
+    <input id="email" type="email" placeholder="you@example.com" />
+    <div class="row">
+      <button id="sendLink">ログインリンク送信</button>
+      <button id="logout" style="background:#111827">ログアウト</button>
+    </div>
+    <p id="authMsg" class="muted"></p>
   </div>
-  <p id="authMsg" class="muted"></p>
-</div>
 
-<div id="chat" class="box" style="display:none;">
-  <h2>AI-OS チャット</h2>
-  <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
-  <button id="send" style="margin-top:8px;">送信</button>
-  <h3>返答</h3>
-  <pre id="out"></pre>
-</div>
+  <!-- 💬 チャット -->
+  <div id="chat" class="box" style="display:none;">
+    <h2>AI-OS チャット</h2>
+    <textarea id="msg" rows="3" placeholder="メッセージを入力"></textarea>
+    <button id="send" style="margin-top:8px;">送信</button>
+    <h3>返答</h3>
+    <pre id="out"></pre>
+  </div>
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  <script type="module">
+    console.log("JS start");
 
-  console.log("JS start");
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  const authBox = document.getElementById("auth");
-  const chatBox = document.getElementById("chat");
-  const authMsg = document.getElementById("authMsg");
-  const out = document.getElementById("out");
+    const authBox = document.getElementById("auth");
+    const chatBox = document.getElementById("chat");
+    const authMsg = document.getElementById("authMsg");
+    const out = document.getElementById("out");
 
-  // ★ cfg は1回だけ
-  const cfg = await fetch("/api/config").then(r => r.json());
-  console.log("cfg loaded:", cfg);
+    // ✅ cfg はここで1回だけ
+    const cfg = await fetch("/api/config").then(r => r.json());
+    console.log("cfg loaded:", cfg);
 
-  // ★ supabase も1回だけ
-  const supabase = createClient(
-    cfg.supabaseUrl,
-    cfg.supabaseAnonKey
-  );
+    const supabase = createClient(
+      cfg.supabaseUrl,
+      cfg.supabaseAnonKey
+    );
 
-  // UI切替（唯一の真実）
-  async function refreshUI() {
-    const { data } = await supabase.auth.getSession();
-    console.log("session:", data.session);
+    async function refreshUI() {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      console.log("session:", session);
 
-    if (data.session) {
-      authBox.style.display = "none";
-      chatBox.style.display = "block";
-    } else {
-      authBox.style.display = "block";
-      chatBox.style.display = "none";
-      authMsg.textContent = "未ログイン";
+      if (session) {
+        authBox.style.display = "none";
+        chatBox.style.display = "block";
+      } else {
+        authBox.style.display = "block";
+        chatBox.style.display = "none";
+        authMsg.textContent = "未ログイン";
+      }
     }
-  }
 
-  await refreshUI();
-
-  supabase.auth.onAuthStateChange(refreshUI);
-
-  document.getElementById("sendLink").onclick = async () => {
-    const email = document.getElementById("email").value.trim();
-    if (!email) return alert("Emailを入力してください");
-
-    authMsg.textContent = "送信中…";
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    authMsg.textContent = error
-      ? `エラー: ${error.message}`
-      : "メールを確認してください";
-  };
-
-  document.getElementById("logout").onclick = async () => {
-    await supabase.auth.signOut();
     await refreshUI();
-  };
 
-  document.getElementById("send").onclick = async () => {
-    out.textContent = "送信ボタンは正常に反応しています 👍";
-  };
-</script>
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshUI();
+    });
 
+    document.getElementById("sendLink").onclick = async () => {
+      const email = document.getElementById("email").value.trim();
+      if (!email) return alert("Emailを入力してください");
+
+      authMsg.textContent = "送信中…";
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin }
+      });
+
+      authMsg.textContent = error
+        ? `エラー: ${error.message}`
+        : "ログインリンクを送信しました。";
+    };
+
+    document.getElementById("logout").onclick = async () => {
+      await supabase.auth.signOut();
+      await refreshUI();
+    };
+
+    document.getElementById("send").onclick = async () => {
+      out.textContent = "送信ボタンは正常に反応しています 👍";
+    };
+  </script>
 </body>
 </html>
